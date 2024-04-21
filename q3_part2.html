@@ -1,0 +1,186 @@
+<!-- Code from d3-graph-gallery.com -->
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<!-- Custom Styling -->
+<style>
+    /* Add style */
+    body {
+      /* Credits: https://cssgradient.io/ */
+      background: rgb(2,0,36);
+      background: linear-gradient(90deg, rgba(0,0,0,0.5) 0%, rgba(255,255,255,0.5) 0%, rgba(150,150,150,0.5) 100%);
+    }
+  
+    #my_dataviz, h2 {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .tooltip {
+        position: absolute;
+        text-align: center;
+        background-color: rgba(150, 150, 150, 0.5); 
+        color: black;
+        border: 1px solid rgba(150, 150, 150, 0.5);
+        padding: 8px 12px;
+        border-radius: 4px;
+        pointer-events: none;
+    }
+
+    .link-button, h2, #info {
+        background-color: rgba(150, 150, 150, 0.5); 
+        color: black;
+        border: 1px solid rgba(150, 150, 150, 0.5);
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        opacity: 0.8;
+        }
+
+    #info{
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+   }
+
+    .link-button:hover {
+            opacity: 0.8;
+        }
+
+  </style>
+
+<h2>Stacked Area Chart for Price vs Years</h2>
+
+<!-- Create a div where the graph will take place -->
+<div id="my_dataviz"></div>
+
+<!-- Link button -->
+<div>
+    <a href="q3_part1.html" class="link-button">Line Graphs</a>
+</div>
+
+<script>
+
+// set the dimensions and margins of the graph
+var margin = {top: 10, right: 30, bottom: 30, left: 55},
+    width = 460 - margin.left - margin.right,
+    height = 400 - margin.top - margin.bottom;
+
+// append the svg object to the body of the page
+var svg = d3.select("#my_dataviz")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+// Parse the Data
+d3.csv("https://raw.githubusercontent.com/ej217/DataVisualization/main/London_house_prices_part2.csv", function(data) {
+
+  // List of groups = header of the csv files
+  var keys = data.columns.slice(1)
+
+  // Add X axis
+  var x = d3.scaleLinear()
+    .domain(d3.extent(data, function(d) { return d.Year; }))
+    .range([ 0, width ]);
+  svg.append("g")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x).ticks(5));
+
+  // Add Y axis
+  var y = d3.scaleLinear()
+    .domain([0, 3000000])
+    .range([ height, 0 ]);
+  svg.append("g")
+    .call(d3.axisLeft(y));
+
+  // color palette
+  var color = d3.scaleOrdinal()
+    .domain(keys)
+    .range(['#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00','#ffff33','#a65628','#f781bf'])
+
+  //stack the data?
+  var stackedData = d3.stack()
+    .keys(keys)
+    (data)
+    //console.log("This is the stack result: ", stackedData)
+
+  // Show the areas
+svg.selectAll("mylayers")
+    .data(stackedData)
+    .enter()
+    .append("path")
+    .style("fill", function(d) { return color(d.key); })
+    .attr("d", d3.area()
+        .x(function(d, i) { return x(d.data.Year); })
+        .y0(function(d) { return y(d[0]); })
+        .y1(function(d) { return y(d[1]); })
+    )
+    .on("mouseover", function(d) {
+        // Highlight the area
+        d3.select(this)
+            .style("opacity", 0.7)
+            .style("stroke", "black")
+            .style("stroke-width", 2);
+        
+        // Show tooltip with the name of the area
+        tooltip.transition()
+            .duration(200)
+            .style("opacity", .9);
+        tooltip.html(d.key)
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - 28) + "px");
+    })
+    .on("mouseout", function(d) {
+        // Remove highlight and hide tooltip
+        d3.select(this)
+            .style("opacity", 1)
+            .style("stroke", "none");
+        
+        tooltip.transition()
+            .duration(500)
+            .style("opacity", 0);
+    });
+
+    // Add a tooltip div
+    var tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+    // Add legend
+    var legend = svg.selectAll(".legend")
+        .data(keys)
+        .enter().append("g")
+        .attr("class", "legend")
+        .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+    legend.append("rect")
+        .attr("x", width - 170)
+        .attr("width", 18)
+        .attr("height", 18)
+        .style("fill", function(d) { return color(d); });
+
+    legend.append("text")
+        .attr("x", width - 175)
+        .attr("y", 9)
+        .attr("dy", ".35em")
+        .style("text-anchor", "end")
+        .text(function(d) { return d; });
+
+})
+
+</script>
+
+<div id="info">
+  This visualization is adapted from <a href="https://d3-graph-gallery.com/graph/stackedarea_wideinput.html">Stacked Area Chart</a>.
+  The dataset used was the <a href="https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/housepriceindexmonthlyquarterlytables1to19">House Prices Data</a> which was transformed using python
+  as shown in this <a href="https://github.com/ej217/DataVisualization/blob/main/q3.ipynb">Notebook</a>.
+</div>
